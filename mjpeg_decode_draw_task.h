@@ -1,8 +1,9 @@
 #pragma once
 
 #define READ_BUFFER_SIZE 2048
-// #define MAXOUTPUTSIZE (MAX_BUFFERED_PIXELS / 16 / 16)
-#define MAXOUTPUTSIZE (320 / 3 / 16)
+// One full MCU row for a 320px-wide frame: 320/16 = 20 MCUs.
+// Using a smaller value (e.g. 6) can make JPEGDEC stop early and stall playback.
+#define MAXOUTPUTSIZE (320 / 16)
 #define NUMBER_OF_DECODE_BUFFER 3
 #define NUMBER_OF_DRAW_BUFFER 9
 
