@@ -1,8 +1,15 @@
 #pragma once
 
 #define READ_BUFFER_SIZE 2048
-// #define MAXOUTPUTSIZE (MAX_BUFFERED_PIXELS / 16 / 16)
-#define MAXOUTPUTSIZE (320 / 3 / 16)
+// Prefer JPEGDEC's own buffered-pixel limit when available.
+// MAXOUTPUTSIZE is measured in 16x16 MCU blocks.
+#ifndef MAXOUTPUTSIZE
+#ifdef MAX_BUFFERED_PIXELS
+#define MAXOUTPUTSIZE (MAX_BUFFERED_PIXELS / 16 / 16)
+#else
+#define MAXOUTPUTSIZE (320 / 16)
+#endif
+#endif
 #define NUMBER_OF_DECODE_BUFFER 3
 #define NUMBER_OF_DRAW_BUFFER 9
 
@@ -65,6 +72,11 @@ static int queueDrawMCU(JPEGDRAW *pDraw)
   j->y = pDraw->y;
   j->iWidth = pDraw->iWidth;
   j->iHeight = pDraw->iHeight;
+  if (!j->pPixels)
+  {
+    log_e("draw buffer is null at idx=%d", _draw_queue_cnt % NUMBER_OF_DRAW_BUFFER);
+    return 0;
+  }
   memcpy(j->pPixels, pDraw->pPixels, len);
 
   // log_i("queueDrawMCU start.");
@@ -137,6 +149,7 @@ bool mjpeg_setup(Stream *input, int32_t mjpegBufSize, JPEG_DRAW_CALLBACK *pfnDra
     else
     {
       log_e("#%d decode buffer allocat failed.", i);
+      return false;
     }
   }
   _mjpeg_buf = _mjpegBufs[_mBufIdx].buf;
@@ -148,6 +161,11 @@ bool mjpeg_setup(Stream *input, int32_t mjpegBufSize, JPEG_DRAW_CALLBACK *pfnDra
   if (_read_buf)
   {
     log_i("Read buffer allocated.");
+  }
+  else
+  {
+    log_e("Read buffer allocat failed.");
+    return false;
   }
 
   _xqh = xQueueCreate(NUMBER_OF_DRAW_BUFFER, sizeof(JPEGDRAW *));
@@ -186,6 +204,7 @@ bool mjpeg_setup(Stream *input, int32_t mjpegBufSize, JPEG_DRAW_CALLBACK *pfnDra
     else
     {
       log_e("#%d draw buffer allocat failed.", i);
+      return false;
     }
   }
 
@@ -205,7 +224,7 @@ bool mjpeg_read_frame()
   while ((_buf_read > 0) && (!found_FFD8))
   {
     i = 0;
-    while ((i < _buf_read) && (!found_FFD8))
+    while ((i + 1 < _buf_read) && (!found_FFD8))
     {
       if ((_read_buf[i] == 0xFF) && (_read_buf[i + 1] == 0xD8)) // JPEG header
       {
@@ -237,7 +256,7 @@ bool mjpeg_read_frame()
       }
       else
       {
-        while ((i < _buf_read) && (!found_FFD9))
+        while ((i + 1 < _buf_read) && (!found_FFD9))
         {
           if ((_p[i] == 0xFF) && (_p[i + 1] == 0xD9)) // JPEG trailer
           {
