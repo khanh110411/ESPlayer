@@ -9,6 +9,9 @@
 #include "AACDecoderHelix.h"
 #include "MP3DecoderHelix.h"
 
+// Compatibility: some ESP32 core / ESP-IDF versions do not define
+// I2S_MCLK_MULTIPLE_DEFAULT, but they do provide the common 256x Fs option.
+// Use that value only as a fallback to keep this sketch building across versions.
 #if !defined(I2S_MCLK_MULTIPLE_DEFAULT) && defined(I2S_MCLK_MULTIPLE_256)
 #define I2S_MCLK_MULTIPLE_DEFAULT I2S_MCLK_MULTIPLE_256
 #endif
