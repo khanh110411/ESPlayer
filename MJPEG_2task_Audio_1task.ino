@@ -8,29 +8,29 @@
 // auto fall back to MP3 if AAC file not available
 #define AAC_FILENAME "/44100.aac"
 #define MP3_FILENAME "/44100.mp3"
-#define MJPEG_FILENAME "/288_30fps.mjpeg"
+#define MJPEG_FILENAME "/320_30fps.mjpeg"
 // #define MJPEG_FILENAME "/320_30fps.mjpeg"
 #define FPS 30
-#define MJPEG_BUFFER_SIZE (288 * 240 * 2 / 8)
+#define MJPEG_BUFFER_SIZE (320 * 240 * 2 / 8)
 // #define MJPEG_BUFFER_SIZE (320 * 240 * 2 / 8)
 #define AUDIOASSIGNCORE 1
 #define DECODEASSIGNCORE 0
 #define DRAWASSIGNCORE 1
 
-#define SDMMC_D3 13  // SDMMC Data3 / SPI CS
-#define SDMMC_CMD 15 // SDMMC CMD   / SPI MOSI
-#define SDMMC_CLK 14 // SDMMC CLK   / SPI SCK
+#define SDMMC_D3 15   // SDMMC Data3 / SPI CS
+#define SDMMC_CMD 13  // SDMMC CMD   / SPI MOSI
+#define SDMMC_CLK 14  // SDMMC CLK   / SPI SCK
 // #define SDMMC_D0 2  // SDMMC Data0 / SPI MISO
-#define SDMMC_D0 4  // SDMMC Data0 / SPI MISO
+#define SDMMC_D0 12  // SDMMC Data0 / SPI MISO
 
 #include <WiFi.h>
-#include <FS.h>
-
-#include <FFat.h>
-#include <LittleFS.h>
-#include <SD.h>
-#include <SD_MMC.h>
-#include <SPIFFS.h>
+#include "FS.h"
+#include "SPI.h"
+// #include <FFat.h>
+// #include <LittleFS.h>
+#include "SD.h"
+// #include <SD_MMC.h>
+// #include <SPIFFS.h>
 
 #if __has_include(<driver/i2s.h>)
 #include <driver/i2s.h>
@@ -47,10 +47,10 @@
  * Start of Arduino_GFX setting
  ******************************************************************************/
 #include <Arduino_GFX_Library.h>
-#define GFX_BL DF_GFX_BL // default backlight pin, you may replace DF_GFX_BL to actual backlight pin
+#define GFX_BL DF_GFX_BL  // default backlight pin, you may replace DF_GFX_BL to actual backlight pin
 Arduino_DataBus *bus = create_default_Arduino_DataBus();
 // Arduino_GFX *gfx = new Arduino_ILI9341(bus, DF_GFX_RST, 3 /* rotation */, false /* IPS */);
-Arduino_GFX *gfx = new Arduino_ST7789(bus, DF_GFX_RST, 1 /* rotation */, true /* IPS */, 240 /* width */, 288 /* height */, 0 /* col offset 1 */, 20 /* row offset 1 */, 0 /* col offset 2 */, 12 /* row offset 2 */);
+Arduino_GFX *gfx = new Arduino_ST7789(bus, DF_GFX_RST, 1 /* rotation */, false /* IPS */, 240 /* width */, 320 /* height */, 0 /* col offset 1 */, 0 /* row offset 1 */, 0 /* col offset 2 */, 0 /* row offset 2 */);
 /*******************************************************************************
  * End of Arduino_GFX setting
  ******************************************************************************/
@@ -67,8 +67,7 @@ static unsigned long start_ms, curr_ms, next_frame_ms;
 #include "mjpeg_decode_draw_task.h"
 
 // pixel drawing callback
-static int drawMCU(JPEGDRAW *pDraw)
-{
+static int drawMCU(JPEGDRAW *pDraw) {
   // Serial.printf("Draw pos = (%d, %d), size = %d x %d\n", pDraw->x, pDraw->y, pDraw->iWidth, pDraw->iHeight);
   unsigned long s = millis();
   gfx->draw16bitRGBBitmap(pDraw->x, pDraw->y, pDraw->pPixels, pDraw->iWidth, pDraw->iHeight);
@@ -76,8 +75,7 @@ static int drawMCU(JPEGDRAW *pDraw)
   return 1;
 } /* drawMCU() */
 
-void setup()
-{
+void setup() {
   WiFi.mode(WIFI_OFF);
 
   Serial.begin(115200);
@@ -90,8 +88,7 @@ void setup()
 #endif
 
   Serial.println("Init display");
-  if (!gfx->begin(80000000))
-  {
+  if (!gfx->begin(80000000)) {
     Serial.println("Init display failed!");
   }
   gfx->fillScreen(BLACK);
@@ -112,8 +109,7 @@ void setup()
 #elif defined(ESP32) && (CONFIG_IDF_TARGET_ESP32C3)
   esp_err_t ret_val = i2s_init(I2S_NUM_0, 44100, -1 /* MCLK */, 10 /* SCLK */, 19 /* LRCK */, 18 /* DOUT */, -1 /* DIN */);
 #endif
-  if (ret_val != ESP_OK)
-  {
+  if (ret_val != ESP_OK) {
 #if defined(ESP32) && (CONFIG_IDF_TARGET_ESP32)
     Serial.printf("i2s_init_internal_dac failed: %d\n", ret_val);
 #else
@@ -121,41 +117,21 @@ void setup()
 #endif
   }
   i2s_zero_dma_buffer(I2S_NUM_0);
-
   Serial.println("Init FS");
   gfx->println("Init FS");
-  // if (!LittleFS.begin(false, "/root"))
-  // if (!SPIFFS.begin(false, "/root"))
-  // if (!FFat.begin(false, "/root"))
-
-  SPIClass spi = SPIClass(HSPI);
-  spi.begin(SDMMC_CLK, SDMMC_D0 /* MISO */, SDMMC_CMD /* MOSI */, SDMMC_D3 /* SS */);
-  if (!SD.begin(SDMMC_D3 /* SS */, spi, 80000000))
-
-  // pinMode(SDMMC_D3 /* CS */, OUTPUT);
-  // digitalWrite(SDMMC_D3 /* CS */, HIGH);
-  // SD_MMC.setPins(SDMMC_CLK, SDMMC_CMD, SDMMC_D0);
-  // if (!SD_MMC.begin("/root", true)) /* 1-bit SD bus mode */
+  SPI.begin(SDMMC_CLK, SDMMC_D0 /* MISO */, SDMMC_CMD /* MOSI */);
+  if (!SD.begin(SDMMC_D3 /* SS */))
   {
     Serial.println("ERROR: File system mount failed!");
     gfx->println("ERROR: File system mount failed!");
-  }
-  else
-  {
+  } else {
     bool aac_file_available = false;
     Serial.println("Open AAC file: " AAC_FILENAME);
     gfx->println("Open AAC file: " AAC_FILENAME);
-    // File aFile = LittleFS.open(AAC_FILENAME);
-    // File aFile = SPIFFS.open(AAC_FILENAME);
-    // File aFile = FFat.open(AAC_FILENAME);
     File aFile = SD.open(AAC_FILENAME);
-    // File aFile = SD_MMC.open(AAC_FILENAME);
-    if (aFile)
-    {
+    if (aFile) {
       aac_file_available = true;
-    }
-    else
-    {
+    } else {
       Serial.println("Open MP3 file: " MP3_FILENAME);
       gfx->println("Open MP3 file: " MP3_FILENAME);
       // aFile = LittleFS.open(MP3_FILENAME);
@@ -165,13 +141,10 @@ void setup()
       // aFile = SD_MMC.open(MP3_FILENAME);
     }
 
-    if (!aFile || aFile.isDirectory())
-    {
+    if (!aFile || aFile.isDirectory()) {
       Serial.println("ERROR: Failed to open " AAC_FILENAME " or " MP3_FILENAME " file for reading");
       gfx->println("ERROR: Failed to open " AAC_FILENAME " or " MP3_FILENAME " file for reading");
-    }
-    else
-    {
+    } else {
       Serial.println("Open MJPEG file: " MJPEG_FILENAME);
       gfx->println("Open MJPEG file: " MJPEG_FILENAME);
       // File vFile = LittleFS.open(MJPEG_FILENAME);
@@ -179,13 +152,10 @@ void setup()
       // File vFile = FFat.open(MJPEG_FILENAME);
       File vFile = SD.open(MJPEG_FILENAME);
       // File vFile = SD_MMC.open(MJPEG_FILENAME);
-      if (!vFile || vFile.isDirectory())
-      {
+      if (!vFile || vFile.isDirectory()) {
         Serial.println("ERROR: Failed to open " MJPEG_FILENAME " file for reading");
         gfx->println("ERROR: Failed to open " MJPEG_FILENAME " file for reading");
-      }
-      else
-      {
+      } else {
         Serial.println("Init video");
         gfx->println("Init video");
         mjpeg_setup(&vFile, MJPEG_BUFFER_SIZE, drawMCU,
@@ -194,16 +164,12 @@ void setup()
         Serial.println("Start play audio task");
         gfx->println("Start play audio task");
         BaseType_t ret_val;
-        if (aac_file_available)
-        {
+        if (aac_file_available) {
           ret_val = aac_player_task_start(&aFile, AUDIOASSIGNCORE);
-        }
-        else
-        {
+        } else {
           ret_val = mp3_player_task_start(&aFile, AUDIOASSIGNCORE);
         }
-        if (ret_val != pdPASS)
-        {
+        if (ret_val != pdPASS) {
           Serial.printf("Audio player task start failed: %d\n", ret_val);
           gfx->printf("Audio player task start failed: %d\n", ret_val);
         }
@@ -213,26 +179,23 @@ void setup()
         start_ms = millis();
         curr_ms = millis();
         next_frame_ms = start_ms + (++next_frame * 1000 / FPS / 2);
-        while (vFile.available() && mjpeg_read_frame()) // Read video
+        while (vFile.available() && mjpeg_read_frame())  // Read video
         {
           total_read_video_ms += millis() - curr_ms;
           curr_ms = millis();
 
-          if (millis() < next_frame_ms) // check show frame or skip frame
+          if (millis() < next_frame_ms)  // check show frame or skip frame
           {
             // Play video
             mjpeg_draw_frame();
             total_decode_video_ms += millis() - curr_ms;
             curr_ms = millis();
-          }
-          else
-          {
+          } else {
             ++skipped_frames;
             Serial.println("Skip frame");
           }
 
-          while (millis() < next_frame_ms)
-          {
+          while (millis() < next_frame_ms) {
             vTaskDelay(pdMS_TO_TICKS(1));
           }
 
@@ -289,8 +252,7 @@ void setup()
 
         float arc_start1 = 0;
         float arc_end1 = arc_start1 + max(2.0, 360.0 * total_read_audio_ms / time_used);
-        for (int i = arc_start1 + 1; i < arc_end1; i += 2)
-        {
+        for (int i = arc_start1 + 1; i < arc_end1; i += 2) {
           gfx->fillArc(cx, cy, r1, r2, arc_start1 - 90.0, i - 90.0, LEGEND_A_COLOR);
         }
         gfx->fillArc(cx, cy, r1, r2, arc_start1 - 90.0, arc_end1 - 90.0, LEGEND_A_COLOR);
@@ -299,8 +261,7 @@ void setup()
 
         float arc_start2 = arc_end1;
         float arc_end2 = arc_start2 + max(2.0, 360.0 * total_decode_audio_ms / time_used);
-        for (int i = arc_start2 + 1; i < arc_end2; i += 2)
-        {
+        for (int i = arc_start2 + 1; i < arc_end2; i += 2) {
           gfx->fillArc(cx, cy, r1, r2, arc_start2 - 90.0, i - 90.0, LEGEND_B_COLOR);
         }
         gfx->fillArc(cx, cy, r1, r2, arc_start2 - 90.0, arc_end2 - 90.0, LEGEND_B_COLOR);
@@ -311,8 +272,7 @@ void setup()
 
         float arc_start3 = arc_end2;
         float arc_end3 = arc_start3 + max(2.0, 360.0 * total_read_video_ms / time_used);
-        for (int i = arc_start3 + 1; i < arc_end3; i += 2)
-        {
+        for (int i = arc_start3 + 1; i < arc_end3; i += 2) {
           gfx->fillArc(cx, cy, r1, r2, arc_start3 - 90.0, i - 90.0, LEGEND_C_COLOR);
         }
         gfx->fillArc(cx, cy, r1, r2, arc_start3 - 90.0, arc_end3 - 90.0, LEGEND_C_COLOR);
@@ -321,8 +281,7 @@ void setup()
 
         float arc_start4 = arc_end3;
         float arc_end4 = arc_start4 + max(2.0, 360.0 * total_show_video_ms / time_used);
-        for (int i = arc_start4 + 1; i < arc_end4; i += 2)
-        {
+        for (int i = arc_start4 + 1; i < arc_end4; i += 2) {
           gfx->fillArc(cx, cy, r1, r2, arc_start4 - 90.0, i - 90.0, LEGEND_D_COLOR);
         }
         gfx->fillArc(cx, cy, r1, r2, arc_start4 - 90.0, arc_end4 - 90.0, LEGEND_D_COLOR);
@@ -331,8 +290,7 @@ void setup()
 
         float arc_start5 = 0;
         float arc_end5 = arc_start5 + max(2.0, 360.0 * total_decode_video_ms / time_used);
-        for (int i = arc_start5 + 1; i < arc_end5; i += 2)
-        {
+        for (int i = arc_start5 + 1; i < arc_end5; i += 2) {
           gfx->fillArc(cx, cy, r2, 0, arc_start5 - 90.0, i - 90.0, LEGEND_E_COLOR);
         }
         gfx->fillArc(cx, cy, r2, 0, arc_start5 - 90.0, arc_end5 - 90.0, LEGEND_E_COLOR);
@@ -350,6 +308,5 @@ void setup()
   }
 }
 
-void loop()
-{
+void loop() {
 }
