@@ -48,6 +48,34 @@ static esp_err_t i2s_init(i2s_port_t i2s_num, uint32_t sample_rate,
     return ret_val;
 }
 
+static esp_err_t i2s_init_internal_dac(i2s_port_t i2s_num, uint32_t sample_rate)
+{
+    _i2s_num = i2s_num;
+
+    esp_err_t ret_val = ESP_OK;
+
+    i2s_config_t i2s_config;
+    i2s_config.mode = (i2s_mode_t)(I2S_MODE_MASTER | I2S_MODE_TX | I2S_MODE_DAC_BUILT_IN);
+    i2s_config.sample_rate = sample_rate;
+    i2s_config.bits_per_sample = I2S_BITS_PER_SAMPLE_16BIT;
+    i2s_config.channel_format = I2S_CHANNEL_FMT_RIGHT_LEFT;
+    i2s_config.communication_format = I2S_COMM_FORMAT_STAND_I2S;
+    i2s_config.intr_alloc_flags = ESP_INTR_FLAG_LEVEL1;
+    i2s_config.dma_buf_count = 8;
+    i2s_config.dma_buf_len = 160;
+    i2s_config.use_apll = false;
+    i2s_config.tx_desc_auto_clear = true;
+    i2s_config.fixed_mclk = 0;
+    i2s_config.mclk_multiple = I2S_MCLK_MULTIPLE_DEFAULT;
+    i2s_config.bits_per_chan = I2S_BITS_PER_CHAN_16BIT;
+
+    ret_val |= i2s_driver_install(i2s_num, &i2s_config, 0, NULL);
+    ret_val |= i2s_set_pin(i2s_num, NULL);
+    ret_val |= i2s_set_dac_mode(I2S_DAC_CHANNEL_BOTH_EN);
+
+    return ret_val;
+}
+
 static int _samprate = 0;
 static void aacAudioDataCallback(AACFrameInfo &info, int16_t *pwm_buffer, size_t len, void*)
 {
