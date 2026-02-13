@@ -90,10 +90,10 @@ void setup()
   digitalWrite(GFX_BL, HIGH);
 #endif
 
-  Serial.println("Init I2S");
-  gfx->println("Init I2S");
+  Serial.println("Init audio output");
+  gfx->println("Init audio output");
 #if defined(ESP32) && (CONFIG_IDF_TARGET_ESP32)
-  esp_err_t ret_val = i2s_init(I2S_NUM_0, 44100, -1 /* MCLK */, 25 /* SCLK */, 26 /* LRCK */, 32 /* DOUT */, -1 /* DIN */);
+  esp_err_t ret_val = i2s_init_internal_dac(I2S_NUM_0, 44100);
 #elif defined(ESP32) && (CONFIG_IDF_TARGET_ESP32S2)
   esp_err_t ret_val = i2s_init(I2S_NUM_0, 44100, -1 /* MCLK */, 4 /* SCLK */, 5 /* LRCK */, 18 /* DOUT */, -1 /* DIN */);
 #elif defined(ESP32) && (CONFIG_IDF_TARGET_ESP32S3)
@@ -103,7 +103,11 @@ void setup()
 #endif
   if (ret_val != ESP_OK)
   {
+#if defined(ESP32) && (CONFIG_IDF_TARGET_ESP32)
+    Serial.printf("i2s_init_internal_dac failed: %d\n", ret_val);
+#else
     Serial.printf("i2s_init failed: %d\n", ret_val);
+#endif
   }
   i2s_zero_dma_buffer(I2S_NUM_0);
 
