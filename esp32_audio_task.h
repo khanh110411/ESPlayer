@@ -9,6 +9,10 @@
 #include "AACDecoderHelix.h"
 #include "MP3DecoderHelix.h"
 
+#if !defined(I2S_MCLK_MULTIPLE_DEFAULT) && defined(I2S_MCLK_MULTIPLE_256)
+#define I2S_MCLK_MULTIPLE_DEFAULT I2S_MCLK_MULTIPLE_256
+#endif
+
 static unsigned long total_read_audio_ms = 0;
 static unsigned long total_decode_audio_ms = 0;
 static unsigned long total_play_audio_ms = 0;
@@ -38,7 +42,9 @@ static esp_err_t i2s_init(i2s_port_t i2s_num, uint32_t sample_rate,
     i2s_config.use_apll = false;
     i2s_config.tx_desc_auto_clear = true;
     i2s_config.fixed_mclk = 0;
+    #if defined(I2S_MCLK_MULTIPLE_DEFAULT)
     i2s_config.mclk_multiple = I2S_MCLK_MULTIPLE_DEFAULT;
+    #endif
     i2s_config.bits_per_chan = I2S_BITS_PER_CHAN_16BIT;
 
     i2s_pin_config_t pin_config;
@@ -72,7 +78,9 @@ static esp_err_t i2s_init_internal_dac(i2s_port_t i2s_num, uint32_t sample_rate)
     i2s_config.use_apll = false;
     i2s_config.tx_desc_auto_clear = true;
     i2s_config.fixed_mclk = 0;
+    #if defined(I2S_MCLK_MULTIPLE_DEFAULT)
     i2s_config.mclk_multiple = I2S_MCLK_MULTIPLE_DEFAULT;
+    #endif
     i2s_config.bits_per_chan = I2S_BITS_PER_CHAN_16BIT;
 
     ret_val |= i2s_driver_install(i2s_num, &i2s_config, 0, NULL);
