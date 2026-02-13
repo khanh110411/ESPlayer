@@ -1,3 +1,5 @@
+#pragma once
+
 #define READ_BUFFER_SIZE 1024
 // #define MAXOUTPUTSIZE (MAX_BUFFERED_PIXELS / 16 / 16)
 #define MAXOUTPUTSIZE (288 / 3 / 16)
