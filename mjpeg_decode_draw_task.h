@@ -150,10 +150,10 @@ bool mjpeg_setup(Stream *input, int32_t mjpegBufSize, JPEG_DRAW_CALLBACK *pfnDra
     log_i("Read buffer allocated.");
   }
 
-  _xqh = xQueueCreate(NUMBER_OF_DRAW_BUFFER, sizeof(JPEGDRAW));
+  _xqh = xQueueCreate(NUMBER_OF_DRAW_BUFFER, sizeof(JPEGDRAW *));
   _pDrawTask.xqh = _xqh;
   _pDrawTask.drawFunc = pfnDraw;
-  _pDecodeTask.xqh = xQueueCreate(NUMBER_OF_DECODE_BUFFER, sizeof(mjpegBuf));
+  _pDecodeTask.xqh = xQueueCreate(NUMBER_OF_DECODE_BUFFER, sizeof(mjpegBuf *));
   _pDecodeTask.drawFunc = queueDrawMCU;
 
   xTaskCreatePinnedToCore(
