@@ -32,6 +32,17 @@
 #include <SD_MMC.h>
 #include <SPIFFS.h>
 
+#if __has_include(<driver/i2s.h>)
+#include <driver/i2s.h>
+#endif
+
+#ifndef BLACK
+#define BLACK 0x0000
+#endif
+#ifndef WHITE
+#define WHITE 0xFFFF
+#endif
+
 /*******************************************************************************
  * Start of Arduino_GFX setting
  ******************************************************************************/

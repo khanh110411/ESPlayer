@@ -1,4 +1,10 @@
+#pragma once
+
+#if __has_include(<driver/i2s.h>)
+#include <driver/i2s.h>
+#elif __has_include("driver/i2s.h")
 #include "driver/i2s.h"
+#endif
 
 #include "AACDecoderHelix.h"
 #include "MP3DecoderHelix.h"
