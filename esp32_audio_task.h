@@ -134,8 +134,15 @@ static void aac_player_task(void *pvParam)
 
     int r, w;
     unsigned long ms = millis();
-    while (r = input->readBytes(_frame, MP3_MAX_FRAME_SIZE))
+    while (input->available() > 0)
     {
+        r = input->read(_frame, MP3_MAX_FRAME_SIZE);
+        if (r <= 0)
+        {
+            vTaskDelay(pdMS_TO_TICKS(1));
+            continue;
+        }
+
         total_read_audio_ms += millis() - ms;
         ms = millis();
 
@@ -160,8 +167,15 @@ static void mp3_player_task(void *pvParam)
 
     int r, w;
     unsigned long ms = millis();
-    while (r = input->readBytes(_frame, MP3_MAX_FRAME_SIZE))
+    while (input->available() > 0)
     {
+        r = input->read(_frame, MP3_MAX_FRAME_SIZE);
+        if (r <= 0)
+        {
+            vTaskDelay(pdMS_TO_TICKS(1));
+            continue;
+        }
+
         total_read_audio_ms += millis() - ms;
         ms = millis();
 
